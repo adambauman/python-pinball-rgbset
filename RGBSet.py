@@ -3,18 +3,20 @@ import sys
 import getopt
 import ConfigParser
 import os
-
-config = ConfigParser.SafeConfigParser()
-config.read('RGBSet.ini')
-comPort = config.get('program', 'comport')
-baud = config.getint('program', 'baud')
-#ser = serial.Serial(comPort, baud)
+import time
 
 
 def main(argv):
-    #testString = "10,20,30"
-    #encodedString = testString.encode(encoding='UTF-8')
+    config = ConfigParser.SafeConfigParser()
+    config.read('RGBSet.ini')
+    comPort = config.get('program', 'comport')
+    baud = config.getint('program', 'baud')
+    ser = serial.Serial(comPort, baud)
+
     tableName = ""
+    logoColor = "128,10,0"
+    print "Opening connection on "+comPort
+    time.sleep(2)
 
     try:
         opts, args = getopt.getopt(argv, "h:t:")
@@ -31,17 +33,13 @@ def main(argv):
     if tableName:
         if config.has_section(tableName) and config.has_option(tableName, 'logocolor'):
             logoColor = config.get(tableName, 'logocolor')
-            encodedLogoColor = logoColor.encode(encoding='UTF-8')
-            print encodedLogoColor
+            print "Sending "+logoColor
         else:
             print "Configuration error, '" + tableName + "' can't be found in RGBSet.ini"
 
-
-
-
-
-    #ser.write(lightString.encode(encoding='UTF8'))
-    #print(ser.readline())
+        encodedLogoColor = logoColor.encode(encoding='UTF-8')
+        ser.write(encodedLogoColor)
+        #print ser.readline()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
