@@ -1,4 +1,4 @@
-import serial
+import serial # pyserial library
 import sys
 import getopt
 import ConfigParser
@@ -28,21 +28,39 @@ menuMessage = ""
 changesPending = 0
 
 # Begin communications
-ser = serial.Serial(comPort, baud)
+try:
+    ser = serial.Serial(comPort, baud)
+except:
+    print "Error establishing serial connect on "+comPort
+    ser = "failed"
+
+if ser != "failed":
+    print "Serial connection on "+comPort+" established.\n"
+    time.sleep(2)
+
 myHue.station_ip = hueIP
-print "Connecting to your Hue hub...\n"
-print "Note: If this process hangs for over two minutes, hit CTRL+C and check the FAQ.\n\n"
+print "Connecting to your Hue hub..."
+print "Note: If this process hangs for over two minutes, hit CTRL+C and check the FAQ.\n"
 print "*** Press the hub's link button now! ***"
 myHue.get_state()
 hueLight = myHue.lights.get('l10')
 
-if ser:
-    print "Serial connection on "+comPort+" established."
-    time.sleep(2)
-
 while True:
     os.system('cls')
-    print "BauTek RGBSet Designer, Main Menu\nA. Table Select\nB. Enter new logo RGB values\nC. Enter new Hue values\nD. Save table changes\n\nE. Toggle Logo Light\nF. Toggle Hue Light\n\nQ. Quit\n"
+    print "BauTek RGBSet Designer, Main Menu"
+    print ""
+    print "A. Table Select"
+    print "B. Enter new logo RGB values"
+    print "C. Enter new Hue lighting values"
+    print "D. Save table changes"
+    print ""
+    print "E. Toggle Logo Lighting"
+    print "F. Toggle Hue Lighting"
+    print "G. Select Hue Light Number"
+    print "H. Set Hue Hub IP Address"
+    print ""
+    print "Q. Quit"
+    print ""
 
     if currentTable == "":
         print "Current table: <no table selected>"
@@ -59,6 +77,8 @@ while True:
     else:
         print "Current Hue Parameters: Bri= %s Sat= %s Hue= %s Light(s)= %s" % (currentHueBri, currentHueSat, currentHueHue, hueLightList)
 
+    print ""
+
     if logoEnabled == 1:
         print "(Global) Logo Lighting: Enabled"
     else:
@@ -69,12 +89,18 @@ while True:
     else:
         print "(Global) Hue Lighting: Disabled"
 
+    if hueIP == "":
+        print "(Global) Hue Hub IP Address: <not set>"
+    else:
+        print "(Global) Hue Hub IP Address: " + hueIP
+
     if changesPending == 1:
         menuMessage += "[Unsaved Changes] "
 
     mainMenuSelect = raw_input("\n"+menuMessage+"|> ")
     menuMessage = ""
 
+    # Table select
     if mainMenuSelect == "A" or mainMenuSelect == "a":
         print "\n"
         tableChangeConfirm = ""
@@ -93,8 +119,12 @@ while True:
                 currentHueHue = config.getint(currentTable, 'hueHue')
 
                 hueLight.set_state({"bri": currentHueBri, "sat": currentHueSat, "hue": currentHueHue})
-                #hueLight.set_state({"bri": 128, "sat": 255, "hue": 40000})
-                ser.write(currentLogoRGB.encode('UTF-8'))
+
+                try:
+                    ser.write(currentLogoRGB.encode('UTF-8'))
+                except:
+                    junk = raw_input("Serial communication failed, press Enter to continue...")
+
             else:
                 junk = raw_input("Invalid table entered, try again or verify the integrity of the configuration file. Enter to continue...")
                 menuMessage = "Invalid table selected "
@@ -106,7 +136,12 @@ while True:
             junk = raw_input("No table selected, select a table first. Enter to continue...")
         else:
             currentLogoRGB = raw_input("Enter comma-separated RGB values (eg. 255,255,255) |> ")
-            ser.write(currentLogoRGB.encode('UTF-8'))
+
+            try:
+                ser.write(currentLogoRGB.encode('UTF-8'))
+            except:
+                junk = raw_input("Serial communication failed, press Enter to continue...")
+
             menuMessage = "Logo "+currentLogoRGB+" set "
             changesPending = 1
 
@@ -124,6 +159,7 @@ while True:
             menuMessage = "Hue params set "
             changesPending = 1
 
+    # Save table changes
     elif mainMenuSelect == "D" or mainMenuSelect == "d":
         print "\n"
         if currentTable == "" or currentLogoRGB == "":
@@ -140,6 +176,53 @@ while True:
             menuMessage = "Save successful "
             changesPending = 0
 
+    # Toggle logo
+    elif mainMenuSelect == "E" or mainMenuSelect == "e":
+        print "\n"
+        logoEnabled = 0
+        config.set('program', 'logoenabled', str(logoEnabled))
+
+        with open('RGBSet.ini', 'wb') as configfile:
+            config.write(configfile)
+
+        menuMessage = "Logo Toggle Set "
+
+    # Toggle Hue
+    elif mainMenuSelect == "F" or mainMenuSelect == "f":
+        print "\n"
+        hueEnabled = 0
+        config.set('program', 'hueenabled', str(hueEnabled))
+
+        with open('RGBSet.ini', 'wb') as configfile:
+            config.write(configfile)
+
+        menuMessage = "Hue Toggle Set "
+
+    # Set Hue light number
+    elif mainMenuSelect == "G" or mainMenuSelect == "g":
+        print "\n"
+        hueLightList = raw_input("Enter Hue light number (easy to find in the Hue app): ")
+
+        config.set('program', 'huelights', hueLightList)
+
+        with open('RGBSet.ini', 'wb') as configfile:
+            config.write(configfile)
+
+        menuMessage = "Hue Light Number Set "
+
+    # Set Hue hub IP
+    elif mainMenuSelect == "H" or mainMenuSelect == "h":
+        print "\n"
+        hueIP = raw_input("Enter Hue Hub IP: ")
+
+        config.set('program', 'hueip', hueIP)
+
+        with open('RGBSet.ini', 'wb') as configfile:
+            config.write(configfile)
+
+        menuMessage = "Hue IP Address Set "
+
+    # Quit
     elif mainMenuSelect == "Q" or mainMenuSelect == "q":
         print "\n"
         if changesPending == 1:
