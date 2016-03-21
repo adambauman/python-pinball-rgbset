@@ -16,7 +16,7 @@ comPort = config.get('program', 'comport')
 baud = config.getint('program', 'baud')
 hueEnabled = config.getint('program', 'hueEnabled')
 logoEnabled = config.getint('program', 'logoEnabled')
-hueLightList = config.getint('program', 'hueLights')
+hueLightList = config.get('program', 'hueLights')
 hueIP = config.get('program', 'hueIP')
 
 currentTable = ""
@@ -34,7 +34,7 @@ print "Connecting to your Hue hub...\n"
 print "Note: If this process hangs for over two minutes, hit CTRL+C and check the FAQ.\n\n"
 print "*** Press the hub's link button now! ***"
 myHue.get_state()
-hueLight = myHue.lights.get('l'+hueLightList)
+hueLight = myHue.lights.get('l10')
 
 if ser:
     print "Serial connection on "+comPort+" established."
@@ -54,10 +54,10 @@ while True:
     else:
         print "Current Logo RGB: "+currentLogoRGB
 
-    if currentRoomRGB == "":
+    if currentTable == "":
         print "Current Hue Parameters: <no Hue data>"
     else:
-        print "Current Hue Parameters: "+currentRoomRGB
+        print "Current Hue Parameters: Bri= %s Sat= %s Hue= %s Light(s)= %s" % (currentHueBri, currentHueSat, currentHueHue, hueLightList)
 
     if logoEnabled == 1:
         print "(Global) Logo Lighting: Enabled"
@@ -88,13 +88,13 @@ while True:
             if config.has_section(tableInput):
                 currentTable = tableInput
                 currentLogoRGB = config.get(currentTable, 'logocolor')
-                currentHueBri = config.get(currentTable, 'hueBri')
-                currentHueSat = config.get(currentTable, 'hueSat')
-                currentHueHue = config.get(currentTable, 'hueHue')
+                currentHueBri = config.getint(currentTable, 'hueBri')
+                currentHueSat = config.getint(currentTable, 'hueSat')
+                currentHueHue = config.getint(currentTable, 'hueHue')
 
                 hueLight.set_state({"bri": currentHueBri, "sat": currentHueSat, "hue": currentHueHue})
+                #hueLight.set_state({"bri": 128, "sat": 255, "hue": 40000})
                 ser.write(currentLogoRGB.encode('UTF-8'))
-
             else:
                 junk = raw_input("Invalid table entered, try again or verify the integrity of the configuration file. Enter to continue...")
                 menuMessage = "Invalid table selected "
@@ -116,9 +116,9 @@ while True:
         if currentTable == "":
             junk = raw_input("No table selected, select a table first. Enter to continue...")
         else:
-            currentHueBri = raw_input("Enter Hue Brightness (0-255) |> ")
-            currentHueSat = raw_input("Enter Hue Saturation (0-255) |> ")
-            currentHueHue = raw_input("Enter Hue Hue (0-65536) |> ")
+            currentHueBri = int(raw_input("Enter Hue Brightness (0-255) |> "))
+            currentHueSat = int(raw_input("Enter Hue Saturation (0-255) |> "))
+            currentHueHue = int(raw_input("Enter Hue Hue (0-65536) |> "))
             hueLight.set_state({"bri": currentHueBri, "sat": currentHueSat, "hue": currentHueHue})
 
             menuMessage = "Hue params set "
@@ -129,10 +129,10 @@ while True:
         if currentTable == "" or currentLogoRGB == "":
             junk = raw_input("Table or RGB selections are invalid, please complete all items. Enter to continue...")
         else:
-            config.set(currentTable, 'logocolor', currentLogoRGB)
-            config.set(currentTable, 'hueBri', currentHueBri)
-            config.set(currentTable, 'hueSat', currentHueSat)
-            config.set(currentTable, 'hueHue', currentHueHue)
+            config.set(currentTable, 'logocolor', str(currentLogoRGB))
+            config.set(currentTable, 'hueBri', str(currentHueBri))
+            config.set(currentTable, 'hueSat', str(currentHueSat))
+            config.set(currentTable, 'hueHue', str(currentHueHue))
 
             with open('RGBSet.ini', 'wb') as configfile:
                 config.write(configfile)
