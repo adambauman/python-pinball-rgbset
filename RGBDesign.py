@@ -7,7 +7,6 @@ import time
 from hue import Hue  # python-hue library
 
 myHue = Hue()
-
 config = ConfigParser.SafeConfigParser()
 config.read('RGBSet.ini')
 
