@@ -1,25 +1,50 @@
-import serial
+#
+#  BauTek Mini Pinball RGBSet
+#  Sets the light parameters for cabinet LED and Philips Hue lights
+#
+#  3/2016 - Adam J. Bauman - adam@kungfutreachery.net
+#
+
+import serial  # pyserial library
 import sys
 import getopt
 import ConfigParser
+# import time
 import os
-import time
+
+try:
+    os.remove('hue.log')  # Flush the Hue log
+except:
+    print "Error clearing hue.log"
+
 from hue import Hue  # python-hue library
 
+
+
 myHue = Hue()
+ser = serial.Serial()
 config = ConfigParser.SafeConfigParser()
 
-def main(argv):
-    config.read('RGBSet.ini')
-    comPort = config.get('program', 'comport')
-    baud = config.getint('program', 'baud')
-    hueEnabled = config.getint('program', 'hueEnabled')
-    logoEnabled = config.getint('program', 'logoEnabled')
-    hueLightList = config.get('program', 'hueLights')
-    hueIP = config.get('program', 'hueIP')
+config.read('RGBSet.ini')
 
-    tableName = ""
-    logoColor = "128,10,0"
+try:
+    logoEnabled = config.getint('program', 'logoEnabled')
+    hueEnabled = config.getint('program', 'hueEnabled')
+except:
+    print "Error reading RGBSet.ini. Configuration is missing or corrupt."
+    quit()
+
+ser.port = config.get('program', 'comport')
+ser.baudrate = config.getint('program', 'baud')
+ser.timeout = 3
+ser.setDTR(False)  # Disabling DTR should stop the Arduino from rebooting on connect
+
+hueLightList = config.get('program', 'hueLights')
+myHue.station_ip = config.get('program', 'hueIP')
+
+
+def main(argv):
+    tablename = ""
 
     if hueEnabled == 0 and logoEnabled == 0:
         print "Logo and Hue lighting disabled, closing RGBSet."
@@ -35,46 +60,43 @@ def main(argv):
             print 'Sets the color of table and room lights. Loads color data from RGBSet.ini\n\nUsage: RGBSet.py -t <tablename>'
             sys.exit()
         elif opt in "-t":
-            tableName = arg
+            tablename = arg
 
-    if tableName:
-        if config.has_section(tableName) and config.has_option(tableName, 'logocolor') and logoEnabled == 1:
-            logoColor = config.get(tableName, 'logocolor')
-            print "Opening connection on " + comPort
+    if tablename and config.has_section(tablename):
+        if config.has_option(tablename, 'logocolor') and logoEnabled == 1:
+            logocolor = config.get(tablename, 'logocolor')
 
+            print "Opening serial connection..."
             try:
-                ser = serial.Serial(comPort, baud)
-                if ser:
-                    print "Serial communication on " + comPort + " successful."
-                    time.sleep(2)
+                ser.open()
+                print "Serial communication successful, sending color command"
+                #time.sleep(2)
+                encodedlogocolor = logocolor.encode(encoding='UTF-8')
+                ser.write(encodedlogocolor)
             except:
-                print "Serial communication on " + comPort + " failed."
-
-            print "Sending "+logoColor
-            encodedLogoColor = logoColor.encode(encoding='UTF-8')
-
-            try:
-                ser.write(encodedLogoColor)
-            except:
-                print "Serial communication error on " + comPort + "."
-                quit()
+                print "Serial communication failed, parameters: %s" % ser
         else:
-            print "Configuration error, '" + tableName + "' can't be found in RGBSet.ini or logo lighting disabled."
+            print "Configuration error, '" + tablename + "' isn't configured in RGBSet.ini or logo lighting disabled."
 
-        if config.has_section(tableName) and config.has_option(tableName, 'huebri') and config.has_option(tableName, 'huesat') and config.has_option(tableName, 'huehue') and hueEnabled == 1:
-            hueBri = config.getint(tableName, 'huebri')
-            hueSat = config.getint(tableName, 'huesat')
-            hueHue = config.getint(tableName, 'huehue')
+        if config.has_option(tablename, 'huebri') and config.has_option(tablename, 'huesat') and config.has_option(tablename, 'huehue') and hueEnabled == 1:
+            huebri = config.getint(tablename, 'huebri')
+            huesat = config.getint(tablename, 'huesat')
+            huehue = config.getint(tablename, 'huehue')
 
-            myHue.station_ip = hueIP
             print "Connecting to your Hue hub..."
-            print "Note: If this process hangs for over two minutes, hit CTRL+C and check the FAQ.\n"
-            print "*** Press the hub's link button now! ***"
-            myHue.get_state()
-            hueLight = myHue.lights.get('l10')
-            hueLight.set_state({"bri": hueBri, "sat": hueSat, "hue": hueHue})
+            try:
+                myHue.get_state()
+                huelight = myHue.lights.get('l10')
+                huelight.set_state({"bri": huebri, "sat": huesat, "hue": huehue})
+            except:
+                print "Hue communication error, check hub link status and IP address"
         else:
-            print "Configuration error, '" + tableName + "' can't be found in RGBSet.ini or Hue lighting disabled."
+            print "Configuration error, '" + tablename + "' isn't configured in RGBSet.ini or Hue lighting disabled."
+    elif tablename != "":
+        print "Invalid table name specified, check RGBSet.ini"
+    else:
+        print "Sets the color of table and room lights. Loads color data from RGBSet.ini\n\nUsage: RGBSet.py -t <tablename>"
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
