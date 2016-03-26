@@ -63,7 +63,7 @@ print "*** Press the hub's link button now! ***"
 try:
     myHue.get_state()
     # hueLight = myHue.lights.get('l10')
-    hueLight = myHue.lights.get('l%s') % hueLightList
+    hueLight = myHue.lights.get('l10')
 except:
     print "Failed to communicate with the Hue hub, check IP and link status."
 
@@ -300,7 +300,7 @@ while True:
             menuMessage = "Save failed "
 
     # Set Hue hub IP
-    elif mainMenuSelect.local() == "h":
+    elif mainMenuSelect.lower() == "h":
         print ""
         hueIP = raw_input("Enter Hue Hub IP: ")
 

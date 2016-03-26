@@ -9,7 +9,7 @@ import serial  # pyserial library
 import sys
 import getopt
 import ConfigParser
-# import time
+import time
 import os
 
 try:
@@ -70,7 +70,6 @@ def main(argv):
             try:
                 ser.open()
                 print "Serial communication successful, sending color command"
-                #time.sleep(2)
                 encodedlogocolor = logocolor.encode(encoding='UTF-8')
                 ser.write(encodedlogocolor)
             except:
@@ -87,6 +86,7 @@ def main(argv):
             try:
                 myHue.get_state()
                 huelight = myHue.lights.get('l10')
+                time.sleep(1)
                 huelight.set_state({"bri": huebri, "sat": huesat, "hue": huehue})
             except:
                 print "Hue communication error, check hub link status and IP address"
